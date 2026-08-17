@@ -435,7 +435,7 @@ export async function previewNote(midi, durationBeats = 0.5) {
   const track = found ? found.track : state.getSelectedTrack();
   if (track?.instrument === "audio") return;
   await ensureAudio();
-  nodeFor(track).play(midi, durationBeats * spb(), Tone.now(), 0.8);
+  nodeFor(track).play(midi, durationBeats * spb(), Tone.immediate(), 0.8);
 }
 
 function quantize(beat) {

@@ -233,7 +233,9 @@ function buildKit(cfg) {
       pieces[midi]?.(time, vel);
     },
     attack(midi) {
-      pieces[midi]?.(Tone.now(), 0.9);
+      // immediate(), not now(): now() adds the transport's 100ms scheduling
+      // lookahead, which on a live keypress is just audible lag.
+      pieces[midi]?.(Tone.immediate(), 0.9);
     },
     release() {},
     releaseAll() {},
@@ -255,10 +257,11 @@ export function buildInstrument(type) {
       synth.triggerAttackRelease(freq(midi), durSec, time, vel);
     },
     attack(midi) {
-      synth.triggerAttack(freq(midi), Tone.now(), 0.8);
+      // See the kit's attack(): live input must bypass the lookahead.
+      synth.triggerAttack(freq(midi), Tone.immediate(), 0.8);
     },
     release(midi) {
-      synth.triggerRelease(freq(midi), Tone.now());
+      synth.triggerRelease(freq(midi), Tone.immediate());
     },
     releaseAll() {
       synth.releaseAll();

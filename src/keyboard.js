@@ -64,7 +64,7 @@ function keyCode(e) {
   return k; // "Enter", "Escape", "Backspace", "Delete" match already
 }
 
-function midiForCode(code) {
+export function midiForCode(code) {
   const kind = INSTRUMENTS[state.getSelectedTrack()?.instrument]?.kind ?? "melodic";
   if (kind === "drums") return DRUM_KEYS[code] ?? null;
   if (kind !== "melodic") return null; // audio tracks: keys don't play notes

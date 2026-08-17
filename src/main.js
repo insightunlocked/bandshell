@@ -19,7 +19,8 @@ initImport(document.getElementById("app"));
 import { songToMidi } from "./export/midi.js";
 import { renderSongToWav, songEndBeat } from "./export/wav.js";
 import * as clips from "./clips.js";
-window.bandshell = { engine, state, clips, songToMidi, renderSongToWav, songEndBeat };
+import * as Tone from "tone";
+window.bandshell = { engine, state, clips, Tone, songToMidi, renderSongToWav, songEndBeat };
 
 // Restore any mic recordings persisted by earlier sessions, then repaint
 // waveforms (clips.onClipsReady listeners handle the repaint).

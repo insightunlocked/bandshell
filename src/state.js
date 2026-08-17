@@ -339,6 +339,15 @@ export function selectNote(noteId, additive = false) {
   emit();
 }
 
+// Replace the whole note selection at once (box select).
+export function setSelection(ids) {
+  const next = new Set(ids);
+  if (next.size === noteSelection.size && [...next].every((i) => noteSelection.has(i))) return;
+  noteSelection.clear();
+  for (const i of next) noteSelection.add(i);
+  emit();
+}
+
 export function clearSelection() {
   if (!noteSelection.size) return;
   noteSelection.clear();

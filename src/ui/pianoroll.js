@@ -30,6 +30,8 @@ let lastMode = null; // "melodic" | "drums" | "empty"
 let lastLength = -1;
 let lastDuration = 1; // default length for new melodic notes, in beats
 let drag = null;
+let marquee = null;
+let marqueeEl;
 
 export function initPianoRoll(root) {
   root.innerHTML = `
@@ -40,6 +42,7 @@ export function initPianoRoll(root) {
           <div class="pr-rows"></div>
           <div class="pr-grid"></div>
           <div class="pr-notes"></div>
+          <div class="pr-marquee" style="display:none"></div>
           <div class="pr-playhead" style="display:none"></div>
         </div>
       </div>
@@ -71,6 +74,7 @@ export function initPianoRoll(root) {
   gridEl = root.querySelector(".pr-grid");
   notesEl = root.querySelector(".pr-notes");
   playheadEl = root.querySelector(".pr-playhead");
+  marqueeEl = root.querySelector(".pr-marquee");
   emptyEl = root.querySelector(".pr-empty");
   audioEl = root.querySelector(".pr-audio");
   audioLabelEl = root.querySelector(".pr-audio-label");
@@ -127,7 +131,7 @@ function buildRows(mode) {
     const key = el("div", `pr-key ${row.cls}`);
     key.style.height = rowH + "px";
     key.textContent = row.label;
-    key.addEventListener("mousedown", () => engine.previewNote(row.pitch, 0.4));
+    key.addEventListener("pointerdown", () => engine.previewNote(row.pitch, 0.4));
     keysEl.appendChild(key);
     const stripe = el("div", `pr-row ${row.cls}`);
     stripe.style.height = rowH + "px";
@@ -289,7 +293,7 @@ function renderNotes(region) {
 // --- interaction ---
 
 function wireEvents() {
-  bodyEl.addEventListener("mousedown", onMouseDown);
+  bodyEl.addEventListener("pointerdown", onMouseDown);
   bodyEl.addEventListener("dblclick", onDblClick);
 }
 
@@ -307,9 +311,12 @@ function onMouseDown(e) {
   const noteEl = e.target.closest(".pr-note");
   if (noteEl) {
     const nid = noteEl.dataset.id;
-    if (!state.getSelection().has(nid)) state.selectNote(nid, e.shiftKey);
+    // Measure BEFORE selecting: selecting re-renders the notes, which detaches
+    // this element and makes its rect all zeros — which read as "grabbed the
+    // right edge" and turned every first drag into a resize.
     const rect = noteEl.getBoundingClientRect();
     const resize = lastMode !== "drums" && e.clientX > rect.right - 7;
+    if (!state.getSelection().has(nid)) state.selectNote(nid, e.shiftKey);
     startDrag(e, resize ? "resize" : "move");
     e.preventDefault();
   } else if (e.metaKey) {
@@ -318,9 +325,87 @@ function onMouseDown(e) {
       if (lastMode !== "drums") startDrag(e, "resize"); // pencil-drag sets length
     }
     e.preventDefault();
-  } else {
+  } else if (e.pointerType === "touch") {
+    // On touch, an empty-grid drag pans the editor — box select is a
+    // pointer-device gesture, and stealing the drag would strand phone users
+    // with no way to scroll.
     state.clearSelection();
+  } else {
+    startMarquee(e); // drag on empty grid = box select
+    e.preventDefault();
   }
+}
+
+// --- box (marquee) select ---
+// Drag across empty grid to select every note the box touches. Shift adds to
+// the current selection; a click without dragging just clears it.
+
+function startMarquee(e) {
+  const rect = bodyEl.getBoundingClientRect();
+  marquee = {
+    x0: e.clientX - rect.left,
+    y0: e.clientY - rect.top,
+    x1: e.clientX - rect.left,
+    y1: e.clientY - rect.top,
+    additive: e.shiftKey,
+    base: e.shiftKey ? new Set(state.getSelection()) : new Set(),
+    moved: false,
+  };
+  window.addEventListener("pointermove", onMarqueeMove);
+  window.addEventListener("pointerup", onMarqueeUp);
+}
+
+function onMarqueeMove(e) {
+  const rect = bodyEl.getBoundingClientRect();
+  marquee.x1 = e.clientX - rect.left;
+  marquee.y1 = e.clientY - rect.top;
+  if (Math.abs(marquee.x1 - marquee.x0) + Math.abs(marquee.y1 - marquee.y0) > 3) {
+    marquee.moved = true;
+  }
+  if (!marquee.moved) return;
+
+  const box = marqueeBox();
+  marqueeEl.style.display = "";
+  marqueeEl.style.left = box.left + "px";
+  marqueeEl.style.top = box.top + "px";
+  marqueeEl.style.width = box.width + "px";
+  marqueeEl.style.height = box.height + "px";
+  applyMarqueeSelection(box);
+}
+
+function onMarqueeUp() {
+  window.removeEventListener("pointermove", onMarqueeMove);
+  window.removeEventListener("pointerup", onMarqueeUp);
+  marqueeEl.style.display = "none";
+  if (!marquee.moved) state.clearSelection(); // plain click on empty space
+  marquee = null;
+}
+
+function marqueeBox() {
+  return {
+    left: Math.min(marquee.x0, marquee.x1),
+    top: Math.min(marquee.y0, marquee.y1),
+    width: Math.abs(marquee.x1 - marquee.x0),
+    height: Math.abs(marquee.y1 - marquee.y0),
+  };
+}
+
+function applyMarqueeSelection(box) {
+  const found = state.getActiveRegion();
+  if (!found) return;
+  const hits = new Set(marquee.base);
+  for (const note of found.region.notes) {
+    const idx = rowIndex.get(note.pitch);
+    if (idx === undefined) continue;
+    const nx = note.startBeat * PXB;
+    const nw = Math.max(4, note.durationBeats * PXB);
+    const ny = idx * rowH;
+    // Standard rectangle overlap — a note counts if the box touches it at all.
+    if (nx < box.left + box.width && nx + nw > box.left && ny < box.top + box.height && ny + rowH > box.top) {
+      hits.add(note.id);
+    }
+  }
+  state.setSelection(hits);
 }
 
 function onDblClick(e) {
@@ -363,8 +448,8 @@ function startDrag(e, dragMode) {
     before: state.snapshot(),
     lastDRow: 0,
   };
-  window.addEventListener("mousemove", onDragMove);
-  window.addEventListener("mouseup", onDragUp);
+  window.addEventListener("pointermove", onDragMove);
+  window.addEventListener("pointerup", onDragUp);
 }
 
 function onDragMove(e) {
@@ -398,8 +483,8 @@ function onDragMove(e) {
 }
 
 function onDragUp() {
-  window.removeEventListener("mousemove", onDragMove);
-  window.removeEventListener("mouseup", onDragUp);
+  window.removeEventListener("pointermove", onDragMove);
+  window.removeEventListener("pointerup", onDragUp);
   state.commitUndo(drag.before);
   drag = null;
 }

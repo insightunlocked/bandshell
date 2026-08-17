@@ -30,14 +30,14 @@ export function initArrange(headers, timeline) {
   thScrollEl = headers.querySelector(".th-scroll");
   const addBtn = headers.querySelector(".add-track");
 
-  addBtn.addEventListener("mousedown", (e) => {
+  addBtn.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     openInstrumentMenu(addBtn, null, (key) => state.addTrack(key));
   });
 
   // Track header actions happen on mousedown (a selection re-render between
   // mousedown and click would otherwise swallow the click).
-  thScrollEl.addEventListener("mousedown", (e) => {
+  thScrollEl.addEventListener("pointerdown", (e) => {
     const header = e.target.closest(".track-header");
     if (!header) return;
     const id = header.dataset.id;
@@ -80,7 +80,7 @@ export function initArrange(headers, timeline) {
   recEl = timeline.querySelector(".rec-region");
   recWaveEl = timeline.querySelector(".rec-wave");
 
-  rulerEl.addEventListener("mousedown", (e) => {
+  rulerEl.addEventListener("pointerdown", (e) => {
     const rect = barsEl.getBoundingClientRect();
     const beat = Math.max(0, Math.round((e.clientX - rect.left) / PX));
     engine.setPlayheadBeat(beat);
@@ -91,7 +91,7 @@ export function initArrange(headers, timeline) {
     thScrollEl.style.transform = `translateY(${-timeline.scrollTop}px)`;
   });
 
-  lanesEl.addEventListener("mousedown", onLaneMouseDown);
+  lanesEl.addEventListener("pointerdown", onLaneMouseDown);
 
   state.onChange(render);
   clips.onClipsReady(render);
@@ -128,7 +128,7 @@ function openInstrumentMenu(anchorEl, track, onPick) {
     }
   }
 
-  menu.addEventListener("mousedown", (e) => {
+  menu.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     const item = e.target.closest(".ins-item");
     if (!item) return;
@@ -144,7 +144,7 @@ function openInstrumentMenu(anchorEl, track, onPick) {
   menu.style.top = top + "px";
   menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8) + "px";
   addMenuEl = menu;
-  setTimeout(() => window.addEventListener("mousedown", closeInstrumentMenu, { once: true }), 0);
+  setTimeout(() => window.addEventListener("pointerdown", closeInstrumentMenu, { once: true }), 0);
 }
 
 function closeInstrumentMenu() {
@@ -192,7 +192,7 @@ function renderHeaders(song) {
         <span class="track-icon track-instrument" title="Change sound">${ins.icon}</span>
         <div class="track-meta">
           <div class="track-name">${escapeHtml(t.name)}</div>
-          <div class="track-kind track-instrument" title="Change sound">${ins.label}<i class="caret">&#9662;</i></div>
+          <div class="track-kind track-instrument" title="Change sound"><span class="ins-name">${ins.label}</span><i class="caret">&#9662;</i></div>
         </div>
         <div class="th-btns">
           <button class="th-btn th-mute ${t.muted ? "on" : ""}" data-act="mute" title="Mute">M</button>
@@ -314,8 +314,8 @@ function onLaneMouseDown(e) {
       trackIdx0: state.getSong().tracks.indexOf(found.track),
       moved: false,
     };
-    window.addEventListener("mousemove", onDragMove);
-    window.addEventListener("mouseup", onDragUp);
+    window.addEventListener("pointermove", onDragMove);
+    window.addEventListener("pointerup", onDragUp);
     e.preventDefault();
     return;
   }
@@ -354,8 +354,8 @@ function onDragMove(e) {
 }
 
 function onDragUp() {
-  window.removeEventListener("mousemove", onDragMove);
-  window.removeEventListener("mouseup", onDragUp);
+  window.removeEventListener("pointermove", onDragMove);
+  window.removeEventListener("pointerup", onDragUp);
   state.commitUndo(drag.before);
   drag = null;
 }

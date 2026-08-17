@@ -366,9 +366,11 @@ body {
   white-space: nowrap;
 }
 
-.track-kind > :first-child,
-.track-kind {
+/* The label is its own span so it can ellipsis without pushing out the caret. */
+.ins-name {
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #timeline {
@@ -913,6 +915,126 @@ body {
 .ins-icon {
   width: 16px;
   text-align: center;
+}
+
+.pr-marquee {
+  position: absolute;
+  z-index: 6;
+  border: 1px solid #8fd0ff;
+  background: rgba(120, 190, 255, 0.16);
+  pointer-events: none;
+}
+
+/* ---------- touch behaviour ----------
+   Only things you deliberately grab opt out of native scrolling. Empty grid
+   and empty lanes keep scrolling so a phone can still navigate the song. */
+
+.pr-note,
+.tl-region,
+.mt-keys,
+.mt-cap,
+.pr-key,
+.pr-tune-slider {
+  touch-action: none;
+}
+
+#app {
+  /* Stop iOS rubber-banding the whole app while dragging inside it. */
+  overscroll-behavior: none;
+}
+
+/* ---------- phones & small tablets ---------- */
+
+@media (max-width: 820px) {
+  #transport {
+    flex: 0 0 50px;
+    gap: 8px;
+    padding: 0 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  #track-headers {
+    flex: 0 0 124px;
+  }
+
+  .track-icon {
+    display: none; /* the instrument name below still opens the picker */
+  }
+
+  .th-btn {
+    /* Fingers need a bigger target than a mouse pointer does. */
+    min-width: 26px;
+    min-height: 26px;
+  }
+
+  .mt-info {
+    width: auto;
+    min-width: 78px;
+    font-size: 10px;
+  }
+
+  #typing-strip {
+    gap: 10px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+
+  .mt-side {
+    display: none; /* keyboard shortcut hints are meaningless on touch */
+  }
+
+  #editor {
+    flex: 0 0 40vh;
+  }
+}
+
+@media (max-width: 560px) {
+  #track-headers {
+    flex: 0 0 138px;
+  }
+
+  .th-btn {
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0 3px;
+  }
+
+  /* The keyboard is the whole point on a phone — give it the full width. */
+  .mt-info {
+    display: none;
+  }
+
+  .track-name {
+    font-size: 12px;
+  }
+
+  .lcd-cell label {
+    display: none; /* the numbers are self-explanatory when space is tight */
+  }
+
+  .brand {
+    display: none;
+  }
+}
+
+/* Landscape phones are short — give the arrange view room to breathe. */
+@media (max-height: 480px) {
+  #transport {
+    flex: 0 0 44px;
+  }
+
+  #editor {
+    flex: 0 0 38vh;
+  }
+
+  #typing-strip {
+    padding: 4px 8px;
+  }
+
+  .mt-keys {
+    height: 48px;
+  }
 }
 
 /* --- drag-and-drop import --- */
